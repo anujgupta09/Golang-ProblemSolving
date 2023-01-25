@@ -11,6 +11,7 @@ import (
 func main() {
 
 	var num int
+	fmt.Print("Enter a number:")
 	fmt.Scan(&num)
 	numbk := num
 	var sumOfpower int
