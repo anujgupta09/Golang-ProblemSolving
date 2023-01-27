@@ -7,13 +7,13 @@ import (
 )
 
 func main() {
-	var c int64 = 1
-	var p int64 = 0
-	var n int64
+	var c float64 = 1
+	var p float64 = 0
+	var n float64
 	fmt.Println("Enter nth number")
 	fmt.Scan(&n)
-	var fiboSeries []int64
-	var i int64
+	var fiboSeries []float64
+	var i float64
 	for i = 1; i <= n; i++ {
 		fiboSeries = append(fiboSeries, p)
 		cbk := c  //as these statement is after 'append and print' last loop is not of any use
