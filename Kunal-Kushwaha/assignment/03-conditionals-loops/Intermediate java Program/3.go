@@ -1,20 +1,37 @@
 // 3. Calculate Average Of N Numbers
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 func main() {
-	var n float32
-	var sum float32 = 0
-	var totalNumber = 0
+
+	var numArray []float32 = []float32{} //declaring slice
+	var eleString string
+	eleInt, err := strconv.Atoi(eleString)
+	var count int = 0
+
 	for {
-		fmt.Print("Enter the number : ")
-		fmt.Scan(&n)
-		if n == 0 {
+		count += 1
+		fmt.Print("Enter '", count, "' number ", " : ")
+		fmt.Println("Type 'exit' to stop")
+		fmt.Scan(&eleString)
+		if eleString == "exit" { //to control exit from user i/p
 			break
 		}
-		totalNumber += 1
-		sum += n
+		if err != nil {
+			fmt.Println("Err : ", err)
+		}
+		numArray = append(numArray, float32(eleInt))
 	}
-	fmt.Println("Average :", sum/float32(totalNumber))
+	fmt.Println("Array : ", numArray, " ||  length : ", len(numArray))
+	var sum float32 = 0
+	var lengthOfn float32 = float32(len(numArray))
+	var i float32
+	for i = 0; i < lengthOfn; i++ {
+		sum += numArray[int(i)]
+	}
+	fmt.Println("\nAverage of all '", lengthOfn, "' numbers is  ", sum/lengthOfn)
 }
