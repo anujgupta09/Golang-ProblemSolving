@@ -10,7 +10,6 @@ func main() {
 
 	var numArray []float32 = []float32{} //declaring slice
 	var eleString string
-	eleInt, err := strconv.Atoi(eleString)
 	var count int = 0
 
 	for {
@@ -21,6 +20,7 @@ func main() {
 		if eleString == "exit" { //to control exit from user i/p
 			break
 		}
+		eleInt, err := strconv.Atoi(eleString)
 		if err != nil {
 			fmt.Println("Err : ", err)
 		}
