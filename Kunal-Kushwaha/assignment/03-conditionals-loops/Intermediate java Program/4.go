@@ -5,9 +5,12 @@ package main
 import "fmt"
 
 func main() {
-	var priceOfProduct, discountedPrice int
-	fmt.Scan(&priceOfProduct, &discountedPrice)
+	var priceOfProduct, discountInPercent int
+	fmt.Print("Enter Amount of Pruduct and Discount in Percent : ")
+	fmt.Scan(&priceOfProduct, &discountInPercent)
 
-	discountOnProduct := priceOfProduct - discountedPrice
-	fmt.Println(discountOnProduct)
+	discountOnProduct := priceOfProduct * discountInPercent / 100
+	discountedPriceOfProduct := priceOfProduct - discountOnProduct
+
+	fmt.Println("Discounted price : ", discountedPriceOfProduct, "|| Discount applied : ", discountOnProduct)
 }
