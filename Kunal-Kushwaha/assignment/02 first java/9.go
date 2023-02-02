@@ -18,7 +18,7 @@ func main() {
 
 	for i := num1; i <= num2; i++ {
 		var sumOfpower int
-		var decidePow = len(strconv.Itoa(i))
+		var decidePow = len(strconv.Itoa(i)) // to find power
 		var j = i
 		for j > 0 {
 			lastDigit := j % 10
