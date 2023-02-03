@@ -8,7 +8,7 @@ func main() {
 	var string1 string
 	fmt.Scan(&string1)
 	var array []string = []string{}
-	var revString string
+	var revString = ""
 	for i := 0; i < len(string1); i++ {
 		strChar := string(string1[i])
 		array = append(array, strChar)
