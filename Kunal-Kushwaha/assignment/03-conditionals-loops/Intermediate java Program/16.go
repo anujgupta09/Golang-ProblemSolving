@@ -2,11 +2,18 @@
 
 package main
 
-import "fmt"
+import (
+	"bufio"
+	"fmt"
+	"os"
+)
 
 func main() {
-	var string1 string
-	fmt.Scan(&string1)
+
+	var scanBufio = bufio.NewScanner(os.Stdin)
+	scanBufio.Scan()
+	var string1 = scanBufio.Text()
+
 	var array []string = []string{}
 	var revString = ""
 	for i := 0; i < len(string1); i++ {
