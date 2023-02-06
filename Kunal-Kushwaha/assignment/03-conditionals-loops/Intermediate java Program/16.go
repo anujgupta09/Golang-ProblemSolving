@@ -10,7 +10,7 @@ import (
 
 func main() {
 
-	var scanBufio = bufio.NewScanner(os.Stdin)
+	var scanBufio = bufio.NewScanner(os.Stdin) //v2 with bufio
 	scanBufio.Scan()
 	var string1 = scanBufio.Text()
 
