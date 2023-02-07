@@ -4,24 +4,24 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 )
 
 func main() {
-	var number = 1000
-	var lenNumber = len(strconv.Itoa(number))
-	var sum int
-	for i := 0; i <= lenNumber; i++ {
-		digit := number % 10
-		var digitPow int
-		for i := 1; i <= lenNumber; i++ {
-			digitPow *= digit
-		}
-		sum += digitPow
+	var num string
+	fmt.Print("Enter a num to chek whether its a palindrom or not : ")
+	fmt.Scan(&num)
+	var array []string = []string{}
+	var revString = ""
+	for i := 0; i < len(num); i++ {
+		strChar := string(num[i])
+		array = append(array, strChar)
 	}
-	if sum == number {
-		fmt.Println("Palindrome")
+	for i := len(array) - 1; i >= 0; i-- {
+		revString += array[i]
+	}
+	if num == revString {
+		fmt.Println("Its a Palindrome")
 	} else {
-		fmt.Println("Not Palindrome")
+		fmt.Println("Its not a palindrome")
 	}
 }
