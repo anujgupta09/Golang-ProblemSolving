@@ -15,6 +15,7 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 )
 
@@ -28,10 +29,16 @@ func main() {
 		if num == "exit" {
 			break
 		}
+		match, _ := regexp.MatchString("^[0-9]+$", num)
+		// match, _ := regexp.MatchString("[0-9]", num) // here " 500* " is passed
+		if !match {
+			fmt.Println("Invalid input. Please enter a valid number.")
+			continue
+		}
 		intNum, err := strconv.Atoi(num)
 		if intNum > 100 || intNum < 0 {
-			fmt.Println("Invalid i/p allowed num between 0 to 100 only...")
-			continue // "continue" is for continuing from the start without breaking the loop
+			fmt.Println("Invalid i/p > allowed num between 0 to 100 only...")
+			continue // restarts current loop
 		}
 		if err != nil {
 			fmt.Println("Error  >>>  ", err)
