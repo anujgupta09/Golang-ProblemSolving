@@ -18,6 +18,8 @@ import (
 	"strconv"
 )
 
+///////////////////////////////////////////// main /////////////////////////////////////////////////////////////
+
 func main() {
 	var array []int = []int{}
 	var num string
@@ -28,40 +30,47 @@ func main() {
 		}
 		intNum, err := strconv.Atoi(num)
 		if intNum > 100 || intNum < 0 {
-			fmt.Println("Invalid i/p wantedd between 0 to 100 oonly...")
-			continue // continue from the start with out breaking looop
+			fmt.Println("Invalid i/p allowed num between 0 to 100 only...")
+			continue // "continue" is for continuing from the start without breaking the loop
 		}
 		if err != nil {
 			fmt.Println("Error  >>>  ", err)
 		}
 		array = append(array, intNum)
 	}
+	grades(array)
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////// grades func //////////////////////////////////////////////////////////////////
+
+func grades(array []int) {
 	var grade string
+	fmt.Println("------------------")
 	fmt.Println("Marks  Grade")
+
 	for i := 0; i < len(array); i++ {
 		switch {
 		case array[i] <= 40:
 			grade = "FAIL"
-			// fmt.Println("Marks: ", array[i], " Grade : FAIL")
 		case array[i] >= 41 && array[i] <= 50:
 			grade = "DD"
-			// fmt.Println("Marks: ", array[i], " Grade : DD...")
 		case array[i] >= 51 && array[i] <= 60:
 			grade = "CD"
-			// fmt.Println("Marks: ", array[i], " Grade : CD...")
 		case array[i] >= 61 && array[i] <= 70:
-			grade = "BD"
-			// fmt.Println("Marks: ", array[i], " Grade : BD...")
+			grade = "BC"
 		case array[i] >= 71 && array[i] <= 80:
 			grade = "BB"
-			// fmt.Println("Marks: ", array[i], " Grade : BB...")
 		case array[i] >= 81 && array[i] <= 90:
 			grade = "AB"
-			// fmt.Println("Marks: ", array[i], " Grade : AB...")
 		case array[i] >= 91 && array[i] <= 100:
 			grade = "AA"
-			// fmt.Println("Marks: ", array[i], " Grade : AA...")
 		}
-		fmt.Println(array[i], "     ", grade)
+		fmt.Println(array[i], "   ", grade)
 	}
+	fmt.Println("------------------")
+
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
