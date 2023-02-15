@@ -8,7 +8,7 @@ import "fmt"
 
 func main() {
 	var accounts [][]int = [][]int{{2, 2, 2}, {4, 4, 4}, {5, 5, 5, 5, 5, 5, 5}, {3, 3}}
-	fmt.Println(maximumWealth(accounts))
+	fmt.Println("Richest customer Wealth : ", maximumWealth(accounts))
 }
 
 func maximumWealth(accounts [][]int) int {
@@ -25,8 +25,8 @@ func maximumWealth(accounts [][]int) int {
 		if currentW > wealth {
 			wealth = currentW
 			wealthiest = i
-			fmt.Println("wealthiest : ", wealthiest)
 		}
 	}
+	fmt.Println("Richest customer id : ", wealthiest)
 	return wealth
 }
