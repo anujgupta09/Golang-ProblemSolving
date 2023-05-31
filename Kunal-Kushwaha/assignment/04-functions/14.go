@@ -9,9 +9,10 @@ import "fmt"
 
 func main() {
 	var n int
+	fmt.Print("Give nth  natural number upto which sum needs to be calculated : ")
 	fmt.Scan(&n)
 	sum := sumOfN(n)
-	fmt.Println(sum)
+	fmt.Println("Sum of all the natural number upto nth number : ", sum)
 }
 func sumOfN(n int) int {
 	var sum = 0
