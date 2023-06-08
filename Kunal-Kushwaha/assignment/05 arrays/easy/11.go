@@ -20,15 +20,15 @@ func main() {
 
 /////////////// countMatches //////////////////////////
 func countMatches(items [][]string, ruleKey string, ruleValue string) int {
-	// var myMap = map[string]int{
-	// 	"type":  0,
-	// 	"color": 1,
-	// 	"name":  2,
-	// }
-	var myMap = make(map[string]int)
-	myMap["type"] = 0
-	myMap["color"] = 1
-	myMap["name"] = 2
+	var myMap = map[string]int{
+		"type":  0,
+		"color": 1,
+		"name":  2,
+	}
+	// var myMap = make(map[string]int)
+	// myMap["type"] = 0
+	// myMap["color"] = 1
+	// myMap["name"] = 2
 
 	match := 0
 	for i := 0; i < len(items); i++ {
