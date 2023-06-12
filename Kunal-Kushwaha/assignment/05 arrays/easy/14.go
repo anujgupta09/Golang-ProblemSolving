@@ -8,11 +8,12 @@ package main
 import "fmt"
 
 func main() {
-	m := 2
-	n := 3
+	m := 300
+	n := 10
 	indices := [][]int{
 		{0, 1},
 		{1, 1},
+		{200, 3},
 	}
 	fmt.Println("oddCells function : ", oddCells(m, n, indices))
 }
