@@ -23,7 +23,7 @@ func main() {
 func oddCells(m int, n int, indices [][]int) int {
 
 	var lenOfIndice = len(indices) // taking len of indices array
-	count := 0                     // intialize to 0
+	countOfOddCells := 0           // intialize to 0
 
 	// creating array >>>>>>>>>>
 
@@ -36,9 +36,9 @@ func oddCells(m int, n int, indices [][]int) int {
 	}
 	fmt.Println("array    : ", array)
 
-	// creating array <<<<<<<<<<
+	//  <<<<<<<<<<
 
-	// iterrating over indices array and updating the main array as per conditions >>>
+	// iterrating over indices array and updating the main array as per conditions >>>>>>>>>>
 
 	for i := 0; i < lenOfIndice; i++ {
 
@@ -68,20 +68,43 @@ func oddCells(m int, n int, indices [][]int) int {
 		fmt.Println("============================================")
 	}
 
-	// iterating over indices array and updating the main array as per conditions <<<
+	// <<<<<<<<<<
 
-	// updating count as we got the final updated array >>>
+	// updating countOfOddCells as we got the final updated array >>>>>>>>>>
 
 	for i := 0; i < len(array); i++ {
 		for j := 0; j < len(array[i]); j++ {
 			fmt.Println("array i j : ", array[i][j])
 			if array[i][j]%2 == 1 { // to check odd no. or not
-				count += 1
+				countOfOddCells += 1
 			}
 		}
 	}
 	fmt.Println(array)
-	// updating count as we got the final updated array >>>
+	//  >>>>>>>>>>
 
-	return count
+	return countOfOddCells
 }
+
+// Optimized soln from discussion very good code minimum lines
+
+// func oddCells(m int, n int, indices [][]int) int {
+// 	x := make(map[int]int) //row
+// 	y := make(map[int]int) //column
+// 	count := 0
+
+// 	for _, subArrayOfIndices := range indices {
+// 		x[subArrayOfIndices[0]] += 1 // row map index
+// 		y[subArrayOfIndices[1]] += 1 // column map index
+// 	}
+// 	fmt.Println(x, "\n", y)
+// 	for i := 0; i < m; i++ { // i is row row number
+// 		for j := 0; j < n; j++ { // j is for cloumn number
+// 			fmt.Println("x and y  :", x[i], y[j])
+// 			if x[i]+y[j]%2 == 1 { //  if any that row + column is odd
+// 				count += 1
+// 			}
+// 		}
+// 	}
+// 	return count
+// }
