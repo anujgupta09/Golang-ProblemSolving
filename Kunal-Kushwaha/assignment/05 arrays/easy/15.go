@@ -13,15 +13,16 @@ func main() {
 	fmt.Println(diagonalSum(mat))
 }
 
-// solution from discussion better !!
+// solution from discussion better lesser lines!!
 func diagonalSum(mat [][]int) int {
+
 	leng := len(mat)
 	mid := leng / 2
 	sum := 0
 	fmt.Println("leng , mid : ", leng, mid)
 
 	for i := 0; i <= leng-1; i++ {
-		sum += mat[i][i] + mat[i][leng-1-i] //main logic
+		sum += mat[i][i] + mat[i][leng-1-i] //main logic taking 00 11 22  for diagonal and 0 last, 0 last-1, 0 laste -2 like this for second diagonal
 	}
 
 	if leng%2 != 0 {
