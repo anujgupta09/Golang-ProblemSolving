@@ -13,12 +13,12 @@ func main() {
 	fmt.Println(findNumbers(nums))
 }
 func findNumbers(nums []int) int {
-	noOfEvennumbers := 0
-	for i, _ := range nums {
+	evenNumberCount := 0
+	for i, _ := range nums { //iterating over nums array
 		if len(strconv.Itoa(nums[i]))%2 == 0 {
-			noOfEvennumbers += 1
+			evenNumberCount += 1
 			fmt.Println("Number ", nums[i], " has even digit")
 		}
 	}
-	return noOfEvennumbers
+	return evenNumberCount
 }
