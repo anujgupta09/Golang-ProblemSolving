@@ -23,33 +23,35 @@
 
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+)
 
 func main() {
-	nums := []int{2, 1, 5} //22217
-	fmt.Println(nums)
+	nums := []int{2, 1, 5}
 	k := 800
 	addToArrayForm(nums, k)
 }
 
 func addToArrayForm(nums []int, k int) []int {
+	var b int
+	fmt.Print(b)
 	l := len(nums) - 1
 	for i := l; i >= 0; i-- {
-		fmt.Println(i, nums[i], "<<<")
 		k += nums[i]
-		fmt.Println(k, k%10)
 		nums[i] = k % 10
 		k /= 10
-		fmt.Println(k, "<<< k ")
 	}
 	n := []int{}
 	for k > 0 {
 		n = append(n, k%10)
 		k /= 10
 	}
+	slices.Reverse(n)
 	final := []int{}
 	final = append(final, n...)
 	final = append(final, nums...)
-	fmt.Println(nums)
+	fmt.Print(final)
 	return (final)
 }
