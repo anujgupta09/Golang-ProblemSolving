@@ -1,0 +1,23 @@
+ARG AGENT_IMAGE
+FROM ${AGENT_IMAGE}
+
+USER root
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y ca-certificates curl git jq \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY podman-remote.tar.gz /tmp/podman-remote.tar.gz
+RUN mkdir /tmp/podman-client \
+    && tar -xzf /tmp/podman-remote.tar.gz -C /tmp/podman-client \
+    && client_path="$(find /tmp/podman-client -type f -name 'podman-remote*' | head -n 1)" \
+    && test -n "$client_path" \
+    && install -m 0755 "$client_path" /usr/local/bin/podman \
+    && rm -rf /tmp/podman-client /tmp/podman-remote.tar.gz \
+    && test "$(id -u jenkins)" = 1000 \
+    && test "$(id -g jenkins)" = 1000 \
+    && mkdir -p /workspace /maven-cache \
+    && chown jenkins:jenkins /workspace /maven-cache \
+    && podman --version
+
+USER jenkins
+WORKDIR /workspace

@@ -1,0 +1,66 @@
+# Configures the controller at first boot (no setup wizard): admin user, security,
+# credentials and the release job. ${VAR} placeholders are substituted from the
+# controller container's environment, set via --env-file by scripts/jenkins-env.sh and
+# populated by scripts/one-touch.sh from .env — see ../../../README.md.
+jenkins:
+  numExecutors: 0
+  slaveAgentPort: -1
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "${JENKINS_ADMIN_USER}"
+          password: "${JENKINS_ADMIN_PASSWORD}"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+# Seeds the three Jenkins credentials.
+# IDs must match what's already committed in ../../config/release.properties
+# (REGISTRY_CREDENTIALS_ID, APP_CREDENTIALS_ID) plus the job's own SCM
+# credential (PIPELINE_REPO_CRED_ID) — only the username/token values here
+# are One Touch-supplied, the IDs are just labels resolved at build time.
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - usernamePassword:
+              scope: GLOBAL
+              id: "${REGISTRY_CRED_ID}"
+              username: "${DOCKERHUB_USERNAME}"
+              password: "${DOCKERHUB_TOKEN}"
+              description: "Docker Hub push credential (One Touch-seeded)"
+          - usernamePassword:
+              scope: GLOBAL
+              id: "${APP_REPO_CRED_ID}"
+              username: "${APP_REPO_GIT_USERNAME}"
+              password: "${APP_REPO_GIT_TOKEN}"
+              description: "java-maven-sample-app checkout PAT (One Touch-seeded)"
+          - usernamePassword:
+              scope: GLOBAL
+              id: "${PIPELINE_REPO_CRED_ID}"
+              username: "${PIPELINE_REPO_GIT_USERNAME}"
+              password: "${PIPELINE_REPO_GIT_TOKEN}"
+              description: "compvalidator-anuj job SCM checkout PAT (One Touch-seeded)"
+
+# Creates the Pipeline job. Runs trusted (no script-approval prompt) because
+# JCasC executes Job DSL itself, unlike a Job DSL *build step*.
+jobs:
+  - script: |
+      pipelineJob('${JOB_NAME}') {
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('${PIPELINE_REPO_URL}')
+                  credentials('${PIPELINE_REPO_CRED_ID}')
+                }
+                branch('${PIPELINE_REPO_BRANCH}')
+              }
+            }
+            scriptPath('${JOB_SCRIPT_PATH}')
+          }
+        }
+      }
+

@@ -1,0 +1,255 @@
+// Task 1 release pipeline. Verified end-to-end (release-1.0.3, build vdx-release-4, SUCCESS).
+// Jenkins job: "Pipeline script from SCM" pointed at this repo (compvalidator-anuj),
+// Script Path: 01-devops-pipeline/Jenkinsfile.
+// Event-driven only: a GitHub webhook (via Generic Webhook Trigger) fires this on
+// tag creation in the separate application repo, java-maven-sample-app. The tunnel
+// exposing Jenkins to that webhook is only run during demo/test windows, not always
+// on; see 01-devops-pipeline/README.md. No polling fallback by design.
+pipeline {
+    agent { label 'vdx-podman' }
+    options {
+        disableConcurrentBuilds()
+        timeout(time: 45, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+    }
+    triggers {
+        GenericTrigger(
+            genericVariables: [
+                [key: 'ref', value: '$.ref'],
+                [key: 'ref_type', value: '$.ref_type']
+            ],
+            token: 'vdx-release-trigger',
+            causeString: 'GitHub tag-creation webhook',
+            printContributedVariables: false,
+            printPostContent: false,
+            regexpFilterText: '$ref_type',
+            regexpFilterExpression: 'tag'
+        )
+    }
+    environment {
+        RELEASE_CONFIG = "${WORKSPACE}/01-devops-pipeline/config/release.properties"
+    }
+    stages {
+        stage('Load Release Config') {
+            steps {
+                script {
+                    if (!fileExists(env.RELEASE_CONFIG)) {
+                        error("Missing release config file: ${env.RELEASE_CONFIG}")
+                    }
+                    def props = readProperties(file: env.RELEASE_CONFIG)
+                    def required = ['APP_REPO_URL', 'APP_CREDENTIALS_ID', 'REGISTRY_CREDENTIALS_ID',
+                        'REGISTRY_NAMESPACE', 'REGISTRY_REPO', 'REGISTRY_IMAGE', 'ANCESTRY_REF']
+                    for (key in required) {
+                        if (!props.containsKey(key) || !props[key]?.trim()) {
+                            error("Release config missing required key: ${key}")
+                        }
+                    }
+                    env.APP_REPO_URL = props.APP_REPO_URL
+                    env.APP_CREDENTIALS_ID = props.APP_CREDENTIALS_ID
+                    env.REGISTRY_CREDENTIALS_ID = props.REGISTRY_CREDENTIALS_ID
+                    env.REGISTRY_NAMESPACE = props.REGISTRY_NAMESPACE
+                    env.REGISTRY_REPO = props.REGISTRY_REPO
+                    env.REGISTRY_IMAGE = props.REGISTRY_IMAGE
+                    env.ANCESTRY_REF = props.ANCESTRY_REF
+                }
+            }
+        }
+        stage('Discover Release Tag') {
+            steps {
+                script { env.RUN_KEY = "vdx-release-${env.BUILD_NUMBER}".toLowerCase() }
+                // GIT_ASKPASS keeps the PAT out of argv/process listing, unlike an embedded URL.
+                withCredentials([usernamePassword(credentialsId: env.APP_CREDENTIALS_ID,
+                        usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
+                    sh '''
+                        set -eu
+                        cat > askpass.sh <<'ASKPASS'
+#!/bin/sh
+case "$1" in
+    Username*) echo "$GIT_USERNAME" ;;
+    Password*) echo "$GIT_PASSWORD" ;;
+esac
+ASKPASS
+                        chmod +x askpass.sh
+                        GIT_ASKPASS="$PWD/askpass.sh" git ls-remote --tags --refs \
+                            "$APP_REPO_URL" 'refs/tags/release-*' > tags.txt
+                        rm -f askpass.sh
+                    '''
+                }
+                script {
+                    env.SKIP_RELEASE = 'false'
+                    def lines = readFile('tags.txt').trim().split('\n').findAll { it }
+                    if (lines.isEmpty()) {
+                        env.SKIP_RELEASE = 'true'
+                        env.SKIP_REASON = 'No release-* tags found on java-maven-sample-app.'
+                        return
+                    }
+                    def tags = lines.collect { line ->
+                        def (sha, ref) = line.split('\t')
+                        [sha: sha, name: ref.replace('refs/tags/', '')]
+                    }.findAll { it.name ==~ /release-\d+\.\d+\.\d+/ }
+                    if (tags.isEmpty()) {
+                        env.SKIP_RELEASE = 'true'
+                        env.SKIP_REASON = 'No tag matches release-X.Y.Z.'
+                        return
+                    }
+                    // Highest semantic version wins, not most-recently-pushed.
+                    tags.sort { a, b ->
+                        def va = (a.name =~ /release-(\d+)\.(\d+)\.(\d+)/)[0]
+                        def vb = (b.name =~ /release-(\d+)\.(\d+)\.(\d+)/)[0]
+                        (1..3).collect { va[it].toInteger() <=> vb[it].toInteger() }.find { it != 0 } ?: 0
+                    }
+                    def latest = tags[-1]
+                    env.RELEASE_TAG = latest.name
+                    env.RELEASE_VERSION = latest.name.replace('release-', '')
+                    env.RELEASE_SHA = latest.sha
+                }
+                // The registry is the source of truth for "already released"; no separate state file.
+                script {
+                    if (env.SKIP_RELEASE == 'true') { return }
+                    def exists = sh(
+                        script: "curl --silent --fail --output /dev/null " +
+                            "\"https://hub.docker.com/v2/repositories/${REGISTRY_NAMESPACE}/${REGISTRY_REPO}/tags/${env.RELEASE_TAG}/\"",
+                        returnStatus: true
+                    ) == 0
+                    if (exists) {
+                        env.SKIP_RELEASE = 'true'
+                        env.SKIP_REASON = "${env.RELEASE_TAG} is already published."
+                    }
+                }
+            }
+        }
+        stage('Checkout Exact Tag') {
+            when { expression { env.SKIP_RELEASE != 'true' } }
+            steps {
+                // Fetch main's tip alongside the tag so ancestry can be checked in the same clone.
+                checkout([$class: 'GitSCM',
+                    branches: [[name: "refs/tags/${env.RELEASE_TAG}"]],
+                    userRemoteConfigs: [[url: env.APP_REPO_URL, credentialsId: env.APP_CREDENTIALS_ID,
+                        refspec: '+refs/heads/main:refs/remotes/origin/main +refs/tags/*:refs/tags/*']],
+                    extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'app'],
+                                 [$class: 'CloneOption', shallow: false, noTags: false]]])
+            }
+        }
+        stage('Validate Ancestry and Version') {
+            when { expression { env.SKIP_RELEASE != 'true' } }
+            steps {
+                sh """
+                    set -eu
+                    cd app
+                    git merge-base --is-ancestor ${env.RELEASE_SHA} ${env.ANCESTRY_REF}
+                """
+                sh '''
+                    set -eu
+                    test -n "$MAVEN_IMAGE"
+                    podman --remote run --rm --name "${RUN_KEY}-version" \
+                        --userns=keep-id:uid=1000,gid=1000 --user 1000:1000 \
+                        --security-opt label=disable \
+                        -e MAVEN_CONFIG=/maven-cache/home -e HOME=/maven-cache/home \
+                        -v vdx-workspace:/workspace -v vdx-maven-cache:/maven-cache \
+                        -w "$WORKSPACE/app" "$MAVEN_IMAGE" \
+                        mvn -q -B -Duser.home=/maven-cache/home \
+                        -Dmaven.repo.local=/maven-cache/repository \
+                        help:evaluate -Dexpression=project.version -DforceStdout \
+                        > "$WORKSPACE/pom-version.txt"
+                '''
+                script {
+                    def pomVersion = readFile('pom-version.txt').trim()
+                    if (pomVersion != env.RELEASE_VERSION) {
+                        error("Tag ${env.RELEASE_TAG} expects POM version ${env.RELEASE_VERSION}, found ${pomVersion}.")
+                    }
+                }
+            }
+        }
+        stage('Compile and Test') {
+            when { expression { env.SKIP_RELEASE != 'true' } }
+            steps {
+                sh '''
+                    set -eu
+                    podman --remote run --rm --name "${RUN_KEY}-maven" \
+                        --userns=keep-id:uid=1000,gid=1000 --user 1000:1000 \
+                        --security-opt label=disable \
+                        -e MAVEN_CONFIG=/maven-cache/home -e HOME=/maven-cache/home \
+                        -v vdx-workspace:/workspace -v vdx-maven-cache:/maven-cache \
+                        -w "$WORKSPACE/app" "$MAVEN_IMAGE" \
+                        mvn -B -Duser.home=/maven-cache/home \
+                        -Dmaven.repo.local=/maven-cache/repository clean verify
+                '''
+                junit testResults: 'app/target/surefire-reports/*.xml'
+            }
+        }
+        stage('Build Debian Image') {
+            when { expression { env.SKIP_RELEASE != 'true' } }
+            steps {
+                sh '''
+                    set -eu
+                    test -n "$DEBIAN_IMAGE"
+                    jar="app/target/rest-service-complete-${RELEASE_VERSION}.jar"
+                    test -s "$jar"
+                    mkdir -p image-context/target
+                    cp "$jar" "image-context/target/rest-service-complete-${RELEASE_VERSION}.jar"
+                    grep -Fx 'FROM docker.io/library/debian:13-slim' 01-devops-pipeline/docker/app/Dockerfile
+                    sed "s|^FROM docker.io/library/debian:13-slim$|FROM $DEBIAN_IMAGE|" \
+                        01-devops-pipeline/docker/app/Dockerfile > image-context/Dockerfile
+                    sed -i "s|rest-service-complete-1.0.0.jar|rest-service-complete-${RELEASE_VERSION}.jar|g" \
+                        image-context/Dockerfile
+                    podman --remote build -t "${REGISTRY_IMAGE}:${RELEASE_TAG}" image-context
+                '''
+            }
+        }
+        stage('Smoke Test') {
+            when { expression { env.SKIP_RELEASE != 'true' } }
+            steps {
+                sh '''
+                    set -eu
+                    podman --remote run -d --name "${RUN_KEY}-app" \
+                        --network vdx-ci "${REGISTRY_IMAGE}:${RELEASE_TAG}"
+                    podman --remote exec "${RUN_KEY}-app" sh -ec \
+                        '. /etc/os-release; test "$ID" = debian; test "$VERSION_ID" = 13'
+                    test "$(podman --remote exec "${RUN_KEY}-app" id -u)" != 0
+                    curl --fail --silent --show-error --retry 30 --retry-all-errors \
+                        --retry-delay 1 --retry-max-time 90 --connect-timeout 2 --max-time 5 \
+                        "http://${RUN_KEY}-app:8080/greeting" > greeting-default.json
+                    jq -e '.content == "Hello, World!"' greeting-default.json
+                '''
+            }
+        }
+        stage('Publish to Registry') {
+            when { expression { env.SKIP_RELEASE != 'true' } }
+            steps {
+                withCredentials([usernamePassword(credentialsId: env.REGISTRY_CREDENTIALS_ID,
+                        usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
+                    sh '''
+                        set -eu
+                        # Guarantees logout even if push fails after a successful login.
+                        trap 'podman --remote logout docker.io || true' EXIT
+                        printf '%s' "$REG_PASS" | podman --remote login docker.io -u "$REG_USER" --password-stdin
+                        podman --remote push "${REGISTRY_IMAGE}:${RELEASE_TAG}"
+                    '''
+                }
+                sh 'podman --remote image inspect --format "{{.Id}}" "${REGISTRY_IMAGE}:${RELEASE_TAG}" > published-image-id.txt'
+            }
+        }
+    }
+    post {
+        always {
+            script {
+                if (env.SKIP_RELEASE == 'true') {
+                    currentBuild.result = 'NOT_BUILT'
+                    currentBuild.description = env.SKIP_REASON
+                } else if (env.RELEASE_TAG) {
+                    currentBuild.description = env.RELEASE_TAG
+                }
+            }
+            archiveArtifacts artifacts: 'pom-version.txt,published-image-id.txt,greeting-default.json,app/target/surefire-reports/*.xml',
+                allowEmptyArchive: true
+        }
+        cleanup {
+            script {
+                if (env.RUN_KEY) {
+                    sh 'podman --remote rm --force --ignore "${RUN_KEY}-maven" "${RUN_KEY}-app" "${RUN_KEY}-version" || true'
+                }
+            }
+            deleteDir()
+        }
+    }
+}
